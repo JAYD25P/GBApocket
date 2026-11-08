@@ -24,3 +24,11 @@ A user-supplied Pokémon FireRed US GBA image was inspected for integration test
 - SHA-256: `3d0c79f1627022e18765766f6cb5ea067f6b5bf7dca115552189ad65a5c3a8ac`
 
 No copyrighted ROMs or Nintendo BIOS files are included in this repository.
+
+## Current controller update
+
+The floating controller includes D-pad, A/B, L/R, Start and Select. Button-up is emitted on both release and cancellation to reduce stuck-input risk. These events are not yet consumed by an emulator core.
+
+## Native emulator integration plan
+
+See [docs/EMULATOR_CORE_INTEGRATION.md](docs/EMULATOR_CORE_INTEGRATION.md) for the mGBA decision, Android build constraints, service/framebuffer architecture, and acceptance criteria. Upstream mGBA does not currently ship an official Android port; a community SDL2 Android port is being used as a technical reference, not as a drop-in dependency.
