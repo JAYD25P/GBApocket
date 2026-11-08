@@ -33,6 +33,7 @@ class GbaEmulatorService : Service() {
     @Volatile private var gameLoaded = false
     @Volatile private var running = false
     private var coreAvailable = false
+    private var foregroundStarted = false
     private var emulationThread: Thread? = null
 
     private val inputReceiver = object : BroadcastReceiver() {
@@ -59,6 +60,25 @@ class GbaEmulatorService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        ContextCompat.registerReceiver(
+            this, inputReceiver, IntentFilter(HudService.ACTION_INPUT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureForeground()
+        ensureCore()
+        if (intent?.action == ACTION_LOAD_ROM) {
+            val uri = intent.data
+            if (uri != null) loadRom(uri)
+            else sessionStatus = "No ROM file was supplied"
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun ensureForeground() {
+        if (foregroundStarted) return
         val channel = "pocketgba_emulator"
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -76,10 +96,11 @@ class GbaEmulatorService : Service() {
                 .setSmallIcon(android.R.drawable.ic_media_play).build()
         }
         startForeground(42, notification)
-        ContextCompat.registerReceiver(
-            this, inputReceiver, IntentFilter(HudService.ACTION_INPUT),
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        foregroundStarted = true
+    }
+
+    private fun ensureCore() {
+        if (coreAvailable) return
         try {
             coreAvailable = NativeGbaCore.nativeInit()
             sessionStatus = if (coreAvailable) "mGBA core initialized; choose a ROM" else "mGBA core initialization failed"
@@ -87,15 +108,6 @@ class GbaEmulatorService : Service() {
             coreAvailable = false
             sessionStatus = "Native core unavailable: ${error.javaClass.simpleName}"
         }
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_LOAD_ROM) {
-            val uri = intent.data
-            if (uri != null) loadRom(uri)
-            else sessionStatus = "No ROM file was supplied"
-        }
-        return START_STICKY
     }
 
     private fun loadRom(uri: Uri) {
