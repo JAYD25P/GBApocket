@@ -14,5 +14,8 @@
         <service android:name=".HudService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-visible floating game controls"/>
         </service>
+        <service android:name=".GbaEmulatorService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-requested continuous Game Boy Advance emulation session"/>
+        </service>
     </application>
 </manifest>
