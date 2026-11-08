@@ -223,6 +223,7 @@ class GbaEmulatorService : Service() {
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
+        displayVisible = false
         running = false
         emulationThread?.interrupt()
         runCatching { emulationThread?.join(500) }
