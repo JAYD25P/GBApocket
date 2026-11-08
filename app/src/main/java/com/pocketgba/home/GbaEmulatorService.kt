@@ -27,6 +27,10 @@ class GbaEmulatorService : Service() {
         fun frame(): IntArray? = latestFrame
         fun status(): String = sessionStatus
         fun isGameLoaded(): Boolean = gameLoaded
+        fun setDisplayVisible(visible: Boolean) {
+            displayVisible = visible
+            if (visible) startEmulationLoop()
+        }
     }
 
     private val binder = LocalBinder()
@@ -34,6 +38,7 @@ class GbaEmulatorService : Service() {
     @Volatile private var sessionStatus = "Waiting for a ROM"
     @Volatile private var gameLoaded = false
     @Volatile private var running = false
+    @Volatile private var displayVisible = false
     private var coreAvailable = false
     private var foregroundStarted = false
     private var emulationThread: Thread? = null
@@ -178,11 +183,11 @@ class GbaEmulatorService : Service() {
     }
 
     private fun startEmulationLoop() {
-        if (running) return
+        if (running || !displayVisible || !gameLoaded) return
         running = true
         emulationThread = thread(name = "PocketGBA-Core", isDaemon = true) {
             val frameNanos = 16_742_706L
-            while (running && gameLoaded) {
+            while (running && gameLoaded && displayVisible) {
                 val start = System.nanoTime()
                 NativeGbaCore.nativeRunFrame()
                 latestFrame = NativeGbaCore.nativeGetFrame()
