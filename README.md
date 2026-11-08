@@ -1,34 +1,44 @@
 # PocketGBA Home
 
-Android hybrid live-wallpaper game display + floating controller prototype.
+Android hybrid GBA home-screen setup: mGBA native core, live-wallpaper game display, and floating controller overlay.
 
-> Status: bootstrap shell only. The wallpaper currently renders a diagnostic frame; it does not execute GBA ROMs. Native mGBA integration, framebuffer transfer, audio, save states and live input bridge remain required before this is a playable emulator.
+## Current implementation
 
-## Build
+- Native build configuration fetches mGBA 0.10.5 and builds its libretro core for Android `arm64-v8a`.
+- JNI bridge exposes core initialization, ROM loading, frame execution, RGB565 framebuffer conversion, and joypad input.
+- A foreground emulator-session service owns the single core instance.
+- The live wallpaper binds to that service and scales the latest 240×160 frame using nearest-neighbour rendering.
+- The floating HUD includes D-pad, A/B, L/R, Start and Select; button transitions are forwarded to the emulator service.
+- ROM access is user-provided through Android's document picker. No ROM or BIOS is included in this repository.
 
-GitHub Actions builds a debug APK on pushes to `main` and manual dispatch. Download the `PocketGBA-Home-debug` artifact from the workflow run.
+## Build and verification
 
-## Architecture
+GitHub Actions builds the debug APK with Android NDK 27.2.12479018 and CMake 3.22.1. It also checks that both native shared libraries are present in the APK. Download the `PocketGBA-Home-debug` artifact from the Actions run.
 
-- Android live wallpaper display service.
-- Movable floating overlay controller.
-- ROM document picker (user-provided ROMs only).
-- Planned native mGBA/libretro JNI bridge.
+**Build status:** native integration has been committed, but this repository change has not yet been verified by a completed CI build or on-device test. Audio output, persistent save RAM, save states, lifecycle pause/resume, and full runtime validation remain outstanding.
 
-## Local test ROM
+## Usage after a successful build
 
-A user-supplied Pokémon FireRed US GBA image was inspected for integration testing. It is intentionally **not committed** to this public repository. Select the ROM from the app's file picker on the device once the emulator core is integrated.
+1. Install the debug APK.
+2. Open PocketGBA Home and choose a legally obtained `.gba` ROM.
+3. Tap **Start emulator session**.
+4. Grant overlay permission and start the floating controller.
+5. Set PocketGBA Live Game as the home-screen live wallpaper.
+
+The emulator service must remain active for the wallpaper to receive frames.
+
+## Native core
+
+mGBA is pinned to upstream tag `0.10.5`, built through its libretro frontend, and linked to the JNI bridge. See [the integration plan](docs/EMULATOR_CORE_INTEGRATION.md).
+
+## User ROM test image
+
+The supplied Pokémon FireRed test image was inspected earlier, but it is intentionally not committed or redistributed. Select it locally on the Android device.
 
 - Archive member: `1636 - Pokemon Fire Red (U)(Squirrels).gba`
 - Size: 16,777,216 bytes
 - SHA-256: `3d0c79f1627022e18765766f6cb5ea067f6b5bf7dca115552189ad65a5c3a8ac`
 
-No copyrighted ROMs or Nintendo BIOS files are included in this repository.
+## Licensing
 
-## Current controller update
-
-The floating controller includes D-pad, A/B, L/R, Start and Select. Button-up is emitted on both release and cancellation to reduce stuck-input risk. These events are not yet consumed by an emulator core.
-
-## Native emulator integration plan
-
-See [docs/EMULATOR_CORE_INTEGRATION.md](docs/EMULATOR_CORE_INTEGRATION.md) for the mGBA decision, Android build constraints, service/framebuffer architecture, and acceptance criteria. Upstream mGBA does not currently ship an official Android port; a community SDL2 Android port is being used as a technical reference, not as a drop-in dependency.
+mGBA is Copyright © 2013–2026 Jeffrey Pfau and is licensed under MPL-2.0. See [the full Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/) and the upstream [mGBA source repository](https://github.com/mgba-emu/mgba). The project must preserve applicable source and license notices when distributing builds.
