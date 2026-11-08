@@ -4,6 +4,7 @@ import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -15,16 +16,27 @@ import androidx.activity.result.contract.ActivityResultContracts
 
 class MainActivity : ComponentActivity() {
     private lateinit var status: TextView
-    private val romPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let {
-            contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            getSharedPreferences("session", MODE_PRIVATE).edit().putString("rom_uri", it.toString()).apply()
-            status.text = "ROM selected. Native emulator core is not connected in this prototype."
+    private lateinit var romButton: Button
+    private var selectedRom: Uri? = null
+
+    private val romPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            selectedRom = uri
+            getSharedPreferences("session", MODE_PRIVATE).edit()
+                .putString("rom_uri", uri.toString()).apply()
+            status.text = "ROM access saved. Emulator core integration is still pending; selecting a file does not start gameplay yet."
+            romButton.text = "ROM selected — choose another"
+        } catch (error: SecurityException) {
+            status.text = "Android did not grant persistent access to this file. Choose it again from a document provider."
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        selectedRom = getSharedPreferences("session", MODE_PRIVATE).getString("rom_uri", null)?.let(Uri::parse)
+
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -37,24 +49,33 @@ class MainActivity : ComponentActivity() {
             setTextColor(0xFFE8F0E8.toInt())
         }
         status = TextView(this).apply {
-            text = "Hybrid live-display + floating HUD prototype"
+            text = if (selectedRom != null) "A ROM file is selected on this device. Emulator core integration is pending."
+                else "Hybrid live-display + floating controller prototype"
             textSize = 14f
             setTextColor(0xFFB8C5BC.toInt())
             setPadding(0, 18, 0, 24)
         }
-        fun action(label: String, run: () -> Unit) {
-            layout.addView(Button(this).apply { text = label; setOnClickListener { run() } })
+        fun action(label: String, run: () -> Unit): Button {
+            val button = Button(this).apply { text = label; setOnClickListener { run() } }
+            layout.addView(button)
+            return button
         }
-        layout.addView(title); layout.addView(status)
-        action("Choose GBA ROM (.gba)") { romPicker.launch(arrayOf("*/*")) }
+        layout.addView(title)
+        layout.addView(status)
+        romButton = action(if (selectedRom == null) "Choose GBA ROM (.gba)" else "ROM selected — choose another") {
+            romPicker.launch(arrayOf("application/octet-stream", "*/*"))
+        }
         action("Grant overlay permission") {
-            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            if (!Settings.canDrawOverlays(this)) {
+                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            } else status.text = "Overlay permission is already enabled."
         }
         action("Start floating controller") {
-            if (!Settings.canDrawOverlays(this)) status.text = "Grant overlay permission first."
-            else {
+            if (!Settings.canDrawOverlays(this)) {
+                status.text = "Grant overlay permission before starting the controller."
+            } else {
                 startForegroundService(Intent(this, HudService::class.java))
-                status.text = "Controller overlay started. Set the live wallpaper separately."
+                status.text = "Floating controller started. Set the live wallpaper separately."
             }
         }
         action("Set live game display wallpaper") {
