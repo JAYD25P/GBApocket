@@ -4,7 +4,6 @@ import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
@@ -26,10 +25,10 @@ class MainActivity : ComponentActivity() {
             selectedRom = uri
             getSharedPreferences("session", MODE_PRIVATE).edit()
                 .putString("rom_uri", uri.toString()).apply()
-            status.text = "ROM access saved. Emulator core integration is still pending; selecting a file does not start gameplay yet."
+            status.text = "ROM selected. Start the emulator session to load it."
             romButton.text = "ROM selected — choose another"
-        } catch (error: SecurityException) {
-            status.text = "Android did not grant persistent access to this file. Choose it again from a document provider."
+        } catch (_: SecurityException) {
+            status.text = "Android did not grant persistent access. Choose the file again."
         }
     }
 
@@ -49,8 +48,8 @@ class MainActivity : ComponentActivity() {
             setTextColor(0xFFE8F0E8.toInt())
         }
         status = TextView(this).apply {
-            text = if (selectedRom != null) "A ROM file is selected on this device. Emulator core integration is pending."
-                else "Hybrid live-display + floating controller prototype"
+            text = if (selectedRom != null) "ROM selected on this device. Start the emulator session to load it."
+                else "Live wallpaper display + floating controller"
             textSize = 14f
             setTextColor(0xFFB8C5BC.toInt())
             setPadding(0, 18, 0, 24)
@@ -65,6 +64,18 @@ class MainActivity : ComponentActivity() {
         romButton = action(if (selectedRom == null) "Choose GBA ROM (.gba)" else "ROM selected — choose another") {
             romPicker.launch(arrayOf("application/octet-stream", "*/*"))
         }
+        action("Start emulator session") {
+            val uri = selectedRom
+            if (uri == null) {
+                status.text = "Choose a GBA ROM first."
+            } else {
+                val intent = Intent(this, GbaEmulatorService::class.java)
+                    .setAction(GbaEmulatorService.ACTION_LOAD_ROM)
+                    .setData(uri)
+                startForegroundService(intent)
+                status.text = "Starting mGBA and loading the selected ROM…"
+            }
+        }
         action("Grant overlay permission") {
             if (!Settings.canDrawOverlays(this)) {
                 startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
@@ -75,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 status.text = "Grant overlay permission before starting the controller."
             } else {
                 startForegroundService(Intent(this, HudService::class.java))
-                status.text = "Floating controller started. Set the live wallpaper separately."
+                status.text = "Controller started. Its buttons are routed to the emulator session."
             }
         }
         action("Set live game display wallpaper") {
@@ -86,6 +97,7 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
         }
         action("Stop controller") { stopService(Intent(this, HudService::class.java)) }
+        action("Stop emulator session") { stopService(Intent(this, GbaEmulatorService::class.java)) }
         setContentView(layout)
     }
 }
