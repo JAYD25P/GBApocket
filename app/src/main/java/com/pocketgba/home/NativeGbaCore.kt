@@ -8,7 +8,7 @@ package com.pocketgba.home
  */
 object NativeGbaCore {
     init {
-        // pocketgba links against the mGBA libretro shared core; Android loads the dependency.
+        System.loadLibrary("pocketgba")
     }
 
     external fun nativeInit(): Boolean
