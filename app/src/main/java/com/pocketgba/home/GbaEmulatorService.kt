@@ -201,10 +201,12 @@ class GbaEmulatorService : Service() {
                 }
             }
             running = false
+            if (displayVisible && gameLoaded) startEmulationLoop()
         }
     }
 
     private fun stopSession() {
+        displayVisible = false
         running = false
         emulationThread?.interrupt()
         runCatching { emulationThread?.join(500) }
