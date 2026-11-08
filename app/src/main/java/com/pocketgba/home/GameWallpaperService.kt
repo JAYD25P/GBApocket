@@ -31,6 +31,7 @@ class GameWallpaperService : WallpaperService() {
         private val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 emulator = service as? GbaEmulatorService.LocalBinder
+                emulator?.setDisplayVisible(visible)
                 if (visible) {
                     handler.removeCallbacks(tick)
                     handler.post(tick)
@@ -59,6 +60,7 @@ class GameWallpaperService : WallpaperService() {
 
         override fun onVisibilityChanged(isVisible: Boolean) {
             visible = isVisible
+            emulator?.setDisplayVisible(isVisible)
             handler.removeCallbacks(tick)
             if (visible) handler.post(tick)
         }
@@ -70,6 +72,7 @@ class GameWallpaperService : WallpaperService() {
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
             visible = false
+            emulator?.setDisplayVisible(false)
             handler.removeCallbacks(tick)
             super.onSurfaceDestroyed(holder)
         }
@@ -108,6 +111,7 @@ class GameWallpaperService : WallpaperService() {
 
         override fun onDestroy() {
             handler.removeCallbacks(tick)
+            emulator?.setDisplayVisible(false)
             if (bound) runCatching { unbindService(connection) }
             bitmap.recycle()
             super.onDestroy()
