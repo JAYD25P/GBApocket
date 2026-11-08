@@ -67,6 +67,10 @@ class GbaEmulatorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            stopSession()
+            return START_NOT_STICKY
+        }
         ensureForeground()
         ensureCore()
         if (intent?.action == ACTION_LOAD_ROM) {
@@ -165,6 +169,20 @@ class GbaEmulatorService : Service() {
         }
     }
 
+    private fun stopSession() {
+        running = false
+        emulationThread?.interrupt()
+        runCatching { emulationThread?.join(500) }
+        if (coreAvailable) runCatching { NativeGbaCore.nativeShutdown() }
+        coreAvailable = false
+        gameLoaded = false
+        latestFrame = null
+        sessionStatus = "Session stopped"
+        if (foregroundStarted) stopForeground(STOP_FOREGROUND_REMOVE)
+        foregroundStarted = false
+        stopSelf()
+    }
+
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
@@ -180,6 +198,7 @@ class GbaEmulatorService : Service() {
 
     companion object {
         const val ACTION_LOAD_ROM = "com.pocketgba.home.LOAD_ROM"
+        const val ACTION_STOP = "com.pocketgba.home.STOP"
         private const val MAX_ROM_BYTES = 32 * 1024 * 1024
     }
 }
