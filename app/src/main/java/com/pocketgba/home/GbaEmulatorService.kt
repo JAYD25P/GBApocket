@@ -13,7 +13,9 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.content.ContextCompat
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.util.zip.ZipInputStream
 import kotlin.concurrent.thread
 
 /**
@@ -132,7 +134,7 @@ class GbaEmulatorService : Service() {
                     output.write(buffer, 0, read)
                 }
             } ?: throw IllegalStateException("Android could not open the selected ROM")
-            val bytes = output.toByteArray()
+            val bytes = extractRomPayload(output.toByteArray())
             require(bytes.isNotEmpty()) { "Selected ROM is empty" }
             gameLoaded = NativeGbaCore.nativeLoadRom(bytes)
             if (!gameLoaded) {
@@ -145,6 +147,34 @@ class GbaEmulatorService : Service() {
             gameLoaded = false
             sessionStatus = "ROM load failed: ${error.message ?: error.javaClass.simpleName}"
         }
+    }
+
+    private fun extractRomPayload(input: ByteArray): ByteArray {
+        require(input.size <= MAX_ROM_BYTES) { "Selected file exceeds 32 MiB limit" }
+        val isZip = input.size >= 4 &&
+            input[0].toInt() == 0x50 && input[1].toInt() == 0x4B
+        if (!isZip) return input
+
+        ZipInputStream(ByteArrayInputStream(input)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (!entry.isDirectory && entry.name.lowercase().endsWith(".gba")) {
+                    val rom = ByteArrayOutputStream()
+                    val buffer = ByteArray(64 * 1024)
+                    var total = 0
+                    while (true) {
+                        val read = zip.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        require(total <= MAX_ROM_BYTES) { "Extracted ROM exceeds 32 MiB limit" }
+                        rom.write(buffer, 0, read)
+                    }
+                    return rom.toByteArray()
+                }
+                zip.closeEntry()
+            }
+        }
+        throw IllegalArgumentException("ZIP archive does not contain a .gba ROM")
     }
 
     private fun startEmulationLoop() {
