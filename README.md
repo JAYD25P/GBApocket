@@ -9,7 +9,7 @@ Android hybrid GBA home-screen setup: mGBA native core, live-wallpaper game disp
 - A foreground emulator-session service owns the single core instance.
 - The live wallpaper binds to that service and scales the latest 240×160 frame using nearest-neighbour rendering.
 - The floating HUD includes D-pad, A/B, L/R, Start and Select; button transitions are forwarded to the emulator service.
-- ROM access is user-provided through Android's document picker. No ROM or BIOS is included in this repository.
+- ROM access is user-provided through Android's document picker; raw `.gba` files and ZIP archives containing a `.gba` file are supported. No ROM or BIOS is included in this repository.
 
 ## Build and verification
 
@@ -21,7 +21,7 @@ GitHub Actions builds the debug APK with Android NDK 27.2.12479018 and CMake 3.2
 
 1. Install the debug APK.
 2. Open PocketGBA Home and choose a legally obtained `.gba` ROM.
-3. Tap **Start emulator session**.
+3. Tap **Start emulator session**. ZIP archives are unpacked locally to their first `.gba` entry.
 4. Grant overlay permission and start the floating controller.
 5. Set PocketGBA Live Game as the home-screen live wallpaper.
 
@@ -41,4 +41,4 @@ The supplied Pokémon FireRed test image was inspected earlier, but it is intent
 
 ## Licensing
 
-mGBA is Copyright © 2013–2026 Jeffrey Pfau and is licensed under MPL-2.0. See [the full Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/) and the upstream [mGBA source repository](https://github.com/mgba-emu/mgba). The project must preserve applicable source and license notices when distributing builds.
+mGBA is Copyright © 2013–2026 Jeffrey Pfau and is licensed under MPL-2.0. The full license is included in the repository and APK assets at `licenses/MGBA-MPL-2.0.txt`. See [the full Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/) and the upstream [mGBA source repository](https://github.com/mgba-emu/mgba). The project must preserve applicable source and license notices when distributing builds.
