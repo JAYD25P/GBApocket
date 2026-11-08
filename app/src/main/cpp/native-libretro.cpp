@@ -11,6 +11,7 @@ extern "C" {
 
 namespace {
 std::mutex coreMutex;
+std::mutex frameMutex;
 std::vector<uint8_t> romBytes;
 std::vector<uint16_t> framePixels(240 * 160, 0);
 unsigned frameWidth = 240;
@@ -42,7 +43,7 @@ bool environment(unsigned command, void* data) {
 
 void videoRefresh(const void* data, unsigned width, unsigned height, size_t pitch) {
     if (!data || width == 0 || height == 0 || width > 240 || height > 160) return;
-    std::lock_guard<std::mutex> lock(coreMutex);
+    std::lock_guard<std::mutex> lock(frameMutex);
     frameWidth = width;
     frameHeight = height;
     const auto* source = static_cast<const uint8_t*>(data);
@@ -124,7 +125,7 @@ Java_com_pocketgba_home_NativeGbaCore_nativeSetButton(JNIEnv*, jclass, jint id, 
 
 extern "C" JNIEXPORT jintArray JNICALL
 Java_com_pocketgba_home_NativeGbaCore_nativeGetFrame(JNIEnv* env, jclass) {
-    std::lock_guard<std::mutex> lock(coreMutex);
+    std::lock_guard<std::mutex> lock(frameMutex);
     const jsize count = 240 * 160;
     jintArray result = env->NewIntArray(count);
     if (!result) return nullptr;
