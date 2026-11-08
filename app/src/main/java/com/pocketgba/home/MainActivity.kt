@@ -97,7 +97,10 @@ class MainActivity : ComponentActivity() {
             startActivity(intent)
         }
         action("Stop controller") { stopService(Intent(this, HudService::class.java)) }
-        action("Stop emulator session") { stopService(Intent(this, GbaEmulatorService::class.java)) }
+        action("Stop emulator session") {
+            startService(Intent(this, GbaEmulatorService::class.java).setAction(GbaEmulatorService.ACTION_STOP))
+            status.text = "Emulator session stopped."
+        }
         setContentView(layout)
     }
 }
